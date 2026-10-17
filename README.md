@@ -43,7 +43,7 @@ The data is a small online shop (customers, products, orders, order items, a vie
 
 ## Screenshots
 
-**Status page**: the result of the last nightly drill, step by step
+**Status page**: a three.js lifebuoy on the night sea, the verdict of the last drill with signal flag C (affirmative) or N (negative), and the key numbers
 
 ![Status page](docs/screenshots/status.png)
 
