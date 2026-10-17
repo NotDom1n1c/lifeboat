@@ -72,12 +72,17 @@ def seed(db, start="2026-10-01 08:00:00") -> dict:
     rng = random.Random(42)
     db.recreate()
     customers = []
-    for cid in range(1, 401):
+    for cid in range(1, 4001):
         first, last = rng.choice(FIRST), rng.choice(LAST)
         customers.append((cid, f"{first} {last}", f"{first}.{last}.{cid}@example.ch".lower(), rng.choice(CITIES), start))
     products = [(pid, f"{name}", rng.randint(9, 189) * 100 - 10, rng.randint(20, 400)) for pid, name in enumerate(PRODUCTS, 1)]
     db.script(SCHEMA + _insert("customers", customers) + _insert("products", products))
-    stats = business_day(db, day="2026-10-01", seed_value=1, orders=600)
+    stats = {}
+    # two weeks of history before the first backup
+    for i in range(14):
+        stats_day = f"2026-10-{i + 1:02d}"
+        for k, v in business_day(db, day=stats_day, seed_value=1000 + i, orders=900).items():
+            stats[k] = stats.get(k, 0) + v
     return {"customers": len(customers), "products": len(products), **stats}
 
 
@@ -91,14 +96,14 @@ def business_day(db, day: str, seed_value: int, orders: int | None = None) -> di
     max_customer = next_customer - 1
 
     new_customers = []
-    for i in range(rng.randint(8, 25)):
+    for i in range(rng.randint(30, 90)):
         cid = next_customer + i
         first, last = rng.choice(FIRST), rng.choice(LAST)
         new_customers.append((cid, f"{first} {last}", f"{first}.{last}.{cid}@example.ch".lower(), rng.choice(CITIES), f"{day} 07:00:00"))
     max_customer += len(new_customers)
 
     order_rows, item_rows, sold = [], [], {}
-    for n in range(orders if orders is not None else rng.randint(60, 140)):
+    for n in range(orders if orders is not None else rng.randint(250, 600)):
         oid = next_order + n
         total = 0
         for _ in range(rng.randint(1, 4)):
