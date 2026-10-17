@@ -8,119 +8,143 @@
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=IBM+Plex+Mono:wght@400;600&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Stencil+One&family=Atkinson+Hyperlegible:wght@400;700&family=DM+Mono:wght@400;500&display=swap">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="top wrap">
-    <a class="brand" href="./">
-      <svg class="ring" viewBox="0 0 40 40" aria-hidden="true">
-        <circle cx="20" cy="20" r="15" fill="none" stroke="currentColor" stroke-width="7"/>
-        <circle cx="20" cy="20" r="15" fill="none" stroke="var(--paper)" stroke-width="7" stroke-dasharray="11.78 11.78" stroke-dashoffset="5.9"/>
-      </svg>
-      LIFEBOAT
-    </a>
-    <nav>
-      <a href="#status">Status</a>
-      <a href="#playground">Playground</a>
-      <a href="https://github.com/NotDom1n1c/lifeboat">GitHub</a>
+  <!-- ------------------------------------------------------------ night sea -->
+  <header class="hero" id="status">
+    <canvas id="sea" aria-hidden="true"></canvas>
+    <div class="hero__shade" aria-hidden="true"></div>
+
+    <nav class="top wrap">
+      <a class="brand" href="./">
+        <svg class="ring" viewBox="0 0 40 40" aria-hidden="true">
+          <circle cx="20" cy="20" r="14" fill="none" stroke="currentColor" stroke-width="7"/>
+          <circle cx="20" cy="20" r="14" fill="none" stroke="var(--foam)" stroke-width="7" stroke-dasharray="11 11" stroke-dashoffset="5.5"/>
+        </svg>
+        LIFEBOAT
+      </a>
+      <div class="top__links">
+        <a href="#logbook">Logbook</a>
+        <a href="#playground">Drill</a>
+        <a href="https://github.com/NotDom1n1c/lifeboat">GitHub</a>
+      </div>
     </nav>
+
+    <div class="hero__body wrap">
+      <p class="kicker">Nightly restore drill · 02:23 UTC</p>
+      <div class="verdict-row">
+        <span class="flag" id="flag" aria-hidden="true"></span>
+        <h1 id="verdict">Reading the log…</h1>
+      </div>
+      <p class="hero__meta" id="verdict-meta"></p>
+      <p class="hero__lead">A backup only counts once it has been restored. Every night a fresh MariaDB is launched,
+        last night's encrypted backup is brought back into it and every table is checked against the fingerprint taken
+        at backup time. Only then does the next backup go out.</p>
+    </div>
+
+    <dl class="gauges wrap" aria-label="Key numbers">
+      <div><dt>Restore time · RTO</dt><dd id="n-rto">-</dd></div>
+      <div><dt>Backup interval · RPO</dt><dd>24 h</dd></div>
+      <div><dt>Drills passed in a row</dt><dd id="n-streak">-</dd></div>
+      <div><dt>Backups aboard</dt><dd id="n-kept">-</dd></div>
+      <div><dt>Rows protected</dt><dd id="n-rows">-</dd></div>
+    </dl>
   </header>
 
   <main>
-    <section class="hero wrap" id="status">
-      <p class="kicker">Nightly restore drill</p>
-      <h1 id="verdict">Checking the last drill…</h1>
-      <p class="lead">A backup is only worth something if it restores. Every night a fresh MariaDB is started on a GitHub runner,
-        last night's encrypted backup is restored into it and every table is checked against the fingerprint taken at backup time.
-        Only then is the next backup taken.</p>
-      <p class="meta" id="verdict-meta"></p>
-    </section>
+    <!-- ------------------------------------------------------------ logbook -->
+    <section class="logbook" id="logbook">
+      <div class="wrap">
+        <header class="sec-head">
+          <span class="sec-head__no">Log · 01</span>
+          <h2>Last night, step by step</h2>
+        </header>
+        <div class="split">
+          <div class="sheet">
+            <ol class="steps" id="steps"></ol>
+            <p class="small" id="run-link"></p>
+          </div>
+          <div class="sheet">
+            <h3>Voyage history</h3>
+            <div class="chart" id="chart" aria-label="Restore time and rows per run"></div>
+            <ul class="runs" id="runs"></ul>
+          </div>
+        </div>
 
-    <section class="wrap numbers" aria-label="Key numbers">
-      <div><span id="n-rto">-</span><small>last restore time (RTO)</small></div>
-      <div><span>24 h</span><small>backup interval (RPO)</small></div>
-      <div><span id="n-streak">-</span><small>drills passed in a row</small></div>
-      <div><span id="n-kept">-</span><small>backups kept</small></div>
-      <div><span id="n-rows">-</span><small>rows protected</small></div>
-    </section>
-
-    <section class="wrap grid2">
-      <div class="card">
-        <h2>Last run, step by step</h2>
-        <ol class="steps" id="steps"></ol>
-        <p class="small muted" id="run-link"></p>
+        <header class="sec-head">
+          <span class="sec-head__no">Log · 02</span>
+          <h2>Backups aboard</h2>
+          <p>GitHub Release "backups", AES-256-GCM. The manifests are public on purpose.</p>
+        </header>
+        <div class="sheet table-wrap">
+          <table>
+            <thead><tr><th>Backup</th><th>Taken</th><th class="r">Size</th><th class="r">Rows</th><th>SHA-256</th><th>Kept as</th></tr></thead>
+            <tbody id="backups"></tbody>
+          </table>
+          <p class="small muted">Retention: the newest of each of the last 7 days, 4 weeks and 6 months. The drill deletes the rest.</p>
+        </div>
       </div>
-      <div class="card">
-        <h2>History</h2>
-        <div class="chart" id="chart" aria-label="Restore time and rows per run"></div>
-        <ul class="runs" id="runs"></ul>
-      </div>
-    </section>
-
-    <section class="wrap card">
-      <h2>Backups in the store <small class="muted">GitHub Release "backups", AES-256-GCM, manifests public on purpose</small></h2>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Backup</th><th>Taken</th><th class="r">Size</th><th class="r">Rows</th><th>SHA-256</th><th>Kept as</th></tr></thead>
-          <tbody id="backups"></tbody>
-        </table>
-      </div>
-      <p class="small muted">Retention: newest of each of the last 7 days, 4 weeks and 6 months. Everything else is deleted by the drill.</p>
     </section>
 
     <!-- ------------------------------------------------------------ playground -->
-    <section class="wrap playground" id="playground">
-      <p class="kicker">Playground</p>
-      <h2 class="big">Break the database. Bring it back.</h2>
-      <p class="lead">A real SQLite shop database runs in your browser. Take a backup, cause a disaster, then run the same
-        drill the nightly job runs: decrypt, restore into an empty database, verify every table.</p>
+    <section class="playground" id="playground">
+      <div class="wrap">
+        <header class="sec-head sec-head--dark">
+          <span class="sec-head__no">Drill · 03</span>
+          <h2>Man overboard</h2>
+          <p>A real SQLite shop runs in your browser. Take a backup, sink the data, then run the same drill as the nightly job: decrypt, restore into an empty database, verify every table.</p>
+        </header>
 
-      <div class="pg">
-        <div class="pg__db card">
-          <div class="pg__head">
-            <h3>Database <code>shop</code></h3>
-            <span class="pill" id="pg-state">loading</span>
-          </div>
-          <table class="mini"><tbody id="pg-tables"></tbody></table>
-          <div class="pg__sample">
-            <h4>Latest orders</h4>
-            <table class="mini"><thead><tr><th>#</th><th>customer</th><th>status</th><th class="r">CHF</th></tr></thead><tbody id="pg-orders"></tbody></table>
-          </div>
-          <div class="btns">
-            <button class="btn" id="pg-day" type="button">Simulate a business day</button>
-            <button class="btn btn--ink" id="pg-backup" type="button">Take backup</button>
-          </div>
-        </div>
-
-        <div class="pg__side">
-          <div class="card">
-            <h3>Cause a disaster</h3>
-            <div class="btns btns--col">
-              <button class="btn btn--bad" data-disaster="drop" type="button">DROP TABLE orders</button>
-              <button class="btn btn--bad" data-disaster="delete" type="button">Buggy deploy deletes 30 % of customers</button>
-              <button class="btn btn--bad" data-disaster="ransom" type="button">Ransomware scrambles every name</button>
-              <button class="btn btn--bad" data-disaster="corrupt" type="button">Flip one byte in the newest backup</button>
+        <div class="pg">
+          <div class="pg__db panel">
+            <div class="pg__head">
+              <h3>Database <code>shop</code></h3>
+              <span class="pill" id="pg-state">loading</span>
+            </div>
+            <table class="mini"><tbody id="pg-tables"></tbody></table>
+            <div class="pg__sample">
+              <h4>Latest orders</h4>
+              <table class="mini"><thead><tr><th>#</th><th>customer</th><th>status</th><th class="r">CHF</th></tr></thead><tbody id="pg-orders"></tbody></table>
+            </div>
+            <div class="btns">
+              <button class="btn" id="pg-day" type="button">Simulate a business day</button>
+              <button class="btn btn--signal" id="pg-backup" type="button">Take backup</button>
             </div>
           </div>
-          <div class="card">
-            <h3>Backups</h3>
-            <ul class="snaps" id="pg-snaps"><li class="muted small">No backup yet. Take one first.</li></ul>
+
+          <div class="pg__side">
+            <div class="panel">
+              <h3>Cause a disaster</h3>
+              <div class="btns btns--col">
+                <button class="btn btn--bad" data-disaster="drop" type="button">DROP TABLE orders</button>
+                <button class="btn btn--bad" data-disaster="delete" type="button">Buggy deploy deletes 30 % of customers</button>
+                <button class="btn btn--bad" data-disaster="ransom" type="button">Ransomware scrambles every name</button>
+                <button class="btn btn--bad" data-disaster="corrupt" type="button">Flip one byte in the newest backup</button>
+              </div>
+            </div>
+            <div class="panel">
+              <h3>Backups</h3>
+              <ul class="snaps" id="pg-snaps"><li class="muted small">No backup yet. Take one first.</li></ul>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="card">
-        <h3>Drill log</h3>
-        <pre class="log" id="pg-log">Waiting for you…</pre>
+        <div class="panel">
+          <h3>Drill log</h3>
+          <pre class="log" id="pg-log">Waiting for you…</pre>
+        </div>
       </div>
     </section>
   </main>
 
-  <footer class="wrap foot">
-    <span>LIFEBOAT by Dominic Aebersold. Part of a platform-engineering portfolio, with
-      <a href="https://notdom1n1c.github.io/launchpad/">LAUNCHPAD</a>.</span>
-    <a href="https://github.com/NotDom1n1c/lifeboat">Source on GitHub</a>
+  <footer class="foot">
+    <div class="wrap">
+      <span>LIFEBOAT by Dominic Aebersold · part of a platform portfolio with
+        <a href="https://notdom1n1c.github.io/launchpad/">LAUNCHPAD</a> and <a href="https://notdom1n1c.github.io/lockbox/">LOCKBOX</a></span>
+      <a href="https://github.com/NotDom1n1c/lifeboat">Source on GitHub</a>
+    </div>
   </footer>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.14.2/sql-wasm.min.js"></script>

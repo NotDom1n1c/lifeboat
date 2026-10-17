@@ -42,6 +42,14 @@ function chart(history) {
     </svg>`;
 }
 
+let sea = null;
+async function startSea() {
+  try {
+    const { createSea } = await import("./sea.js");
+    sea = createSea(document.querySelector("#sea"), { reducedMotion: matchMedia("(prefers-reduced-motion: reduce)").matches });
+  } catch { sea = null; }
+}
+
 async function render() {
   let history, backups;
   try {
@@ -52,7 +60,11 @@ async function render() {
   }
   const last = history.at(-1);
   const passed = last.status === "passed";
-  $("#verdict").innerHTML = `Last restore drill: <span class="${passed ? "ok" : "bad"}">${passed ? "passed" : "FAILED"}</span>`;
+  $("#verdict").innerHTML = `Drill <span class="${passed ? "ok" : "bad"}">${passed ? "passed" : "failed"}</span>`;
+  // signal flag C means "affirmative", N means "negative"
+  $("#flag").className = `flag ${passed ? "flag--c" : "flag--n"}`;
+  $("#flag").title = passed ? "Signal flag C: affirmative" : "Signal flag N: negative";
+  sea?.setStatus(passed ? "passed" : "failed");
   $("#verdict-meta").textContent = `run ${last.run} · ${ago(last.finished_at)} · ${when(last.finished_at)}${last.restore ? ` · restored ${last.restore.source}` : " · genesis"}`;
 
   let streak = 0;
@@ -84,4 +96,4 @@ async function render() {
       <td>${b.kept_as.map((k) => `<span class="tag ${k === "latest" ? "latest" : ""}">${esc(k)}</span>`).join("")}</td></tr>`).join("");
 }
 
-render();
+startSea().then(render);
