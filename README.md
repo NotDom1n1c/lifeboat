@@ -41,6 +41,16 @@ If any of steps 1-5 fails, **no new backup is taken** from a database that did n
 
 The data is a small online shop (customers, products, orders, order items, a view) that started with two weeks of history and grows every night.
 
+## Screenshots
+
+**Status page**: the result of the last nightly drill, step by step
+
+![Status page](docs/screenshots/status.png)
+
+**Playground**: break a SQLite database in your browser (drop a table, a buggy deploy, ransomware, a corrupted backup) and run the restore drill
+
+![Playground](docs/screenshots/playground.png)
+
 ## Design decisions
 
 - **The restore is the test.** Each night continues from the restored data. If restores stopped working, the chain would break at once.
