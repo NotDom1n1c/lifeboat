@@ -1,0 +1,97 @@
+# Every night: restore + verify last night's backup in a FRESH MariaDB, then take the next one.
+# Then publish the status page with the result.
+name: nightly drill
+
+on:
+  schedule:
+    - cron: "23 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write   # release assets = the backup store
+  issues: write     # a failed drill opens an issue
+  pages: write
+  id-token: write
+
+concurrency:
+  group: lifeboat
+  cancel-in-progress: false
+
+jobs:
+  drill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mariadb:
+        image: mariadb:11.8
+        env:
+          MARIADB_ROOT_PASSWORD: lifeboat-ci   # throwaway: the container lives for this job only
+        options: >-
+          --health-cmd "healthcheck.sh --connect --innodb_initialized"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    outputs:
+      status: ${{ steps.drill.outcome }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+
+      - name: Restore drill + new backup
+        id: drill
+        env:
+          LIFEBOAT_KEY: ${{ secrets.LIFEBOAT_KEY }}
+          LIFEBOAT_STORE: github:${{ github.repository }}
+          LIFEBOAT_DB_EXEC: docker exec -i -e MYSQL_PWD=lifeboat-ci ${{ job.services.mariadb.id }}
+          GH_TOKEN: ${{ github.token }}
+        run: python -m lifeboat drill --out site/data
+
+      - name: Summary
+        if: always()
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          e = json.load(open("site/data/history.json"))[-1]
+          print(f"### Run {e['run']}: {e['status'].upper()}")
+          print("| step | result | time | detail |\n|---|---|---|---|")
+          for s in e["steps"]:
+              print(f"| {s['name']} | {s['status']} | {s['seconds']}s | {s['detail']} |")
+          PY
+
+      - name: Open an issue when the drill fails
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create drill-failed --color B60205 --description "Nightly restore drill failed" --force
+          gh issue create --label drill-failed --title "Restore drill failed ($(date -u +%F))"             --body "The nightly drill failed. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+      - name: Close open drill issues after a success
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for n in $(gh issue list --label drill-failed --state open --json number --jq '.[].number'); do
+            gh issue close "$n" --comment "Recovered: run ${{ github.run_id }} restored and verified the backup."
+          done
+
+      - name: Build status page
+        if: always()
+        run: cp -r site _site
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        if: always()
+        with:
+          path: _site
+
+  pages:
+    needs: drill
+    if: always()
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

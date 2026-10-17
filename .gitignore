@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+backups/
+site/data/
+.lifeboat-key
+_site/
